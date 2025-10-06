@@ -15,7 +15,6 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "SceneView.h"
 #include "RenderGraph.h"
-#include "RenderGraphResources.h"
 
 #if WITH_RTXGI
 #include "RayGenShaderUtils.h"
@@ -55,20 +54,6 @@ static TAutoConsoleVariable<float> CVarDDGIIrradianceScalar(
 	TEXT("Multiplier to compensate for irradiance clipping that might happen in 10-bit mode (use smaller values for higher irradiance) for one of the \'r.RTXGI.DDGI.ProbesTextureVis\' debug modes. The value is clamped to [0.001, 1.0].\n"),
 	ECVF_RenderThreadSafe);
 #endif
-
-#if WITH_EDITOR
-static TAutoConsoleVariable<bool> CVarDDGIStaticInEditor(
-	TEXT("r.RTXGI.DDGI.StaticInEditor"),
-	true,
-	TEXT("If true, will not update DDGI volumes in editor views\n"),
-	ECVF_RenderThreadSafe);
-#endif
-
-static TAutoConsoleVariable<bool> CVarDDGIForceRealtime(
-	TEXT("r.RTXGI.DDGI.ForceRealtime"),
-	false,
-	TEXT("If true, will force DDGI volumes as realtime.\n"),
-	ECVF_RenderThreadSafe);
 
 #if RHI_RAYTRACING
 
@@ -170,7 +155,7 @@ class FRayTracingRTXGIProbeUpdateRGS : public FGlobalShader
 
 		// Set to 1 to be able to visualize this in the editor by typing "vis DDGIVolumeUpdateDebug" and later "vis none" to make it go away.
 		// Set to 0 to disable and deadstrip everything related
-		OutEnvironment.SetDefine(TEXT("DDGIVolumeUpdateDebug"), WITH_EDITOR);
+		OutEnvironment.SetDefine(TEXT("DDGIVolumeUpdateDebug"), 0);
 
 #if ENGINE_MAJOR_VERSION < 5
 		OutEnvironment.SetDefine(TEXT("UE4_COMPAT"), 1);
@@ -184,13 +169,8 @@ class FRayTracingRTXGIProbeUpdateRGS : public FGlobalShader
 		return ShouldCompileRayTracingShadersForProject(Parameters.Platform);
 	}
 
-	static ERayTracingPayloadType GetRayTracingPayloadType(const int32 PermutationId)
-	{
-		return ERayTracingPayloadType::RayTracingMaterial;
-	}
-
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_RDG_BUFFER_SRV(RaytracingAccelerationStructure, TLAS)
+		SHADER_PARAMETER_SRV(RaytracingAccelerationStructure, TLAS)
 
 		SHADER_PARAMETER(uint32, FrameRandomSeed)
 
@@ -215,8 +195,14 @@ class FRayTracingRTXGIProbeUpdateRGS : public FGlobalShader
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, DebugOutput)  // Per unreal RDG presentation, this is deadstripped if the shader doesn't write to it
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<uint>, DDGIProbeScrollSpace)
 
+		// assorted things needed by material resolves, even though some don't make sense outside of screenspace
+#if ENGINE_MAJOR_VERSION < 5
+		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, SSProfilesTexture)
+#else
+		SHADER_PARAMETER_TEXTURE(Texture2D, SSProfilesTexture)
+#endif
 		SHADER_PARAMETER_STRUCT_REF(FViewUniformShaderParameters, ViewUniformBuffer)
-		SHADER_PARAMETER_RDG_UNIFORM_BUFFER(FRaytracingLightDataPacked, LightDataPacked)
+		SHADER_PARAMETER_STRUCT_REF(FRaytracingLightDataPacked, LightDataPacked)
 	END_SHADER_PARAMETER_STRUCT()
 };
 
@@ -253,13 +239,8 @@ class FRayTracingRTXGIProbeViewRGS : public FGlobalShader
 		return ShouldCompileRayTracingShadersForProject(Parameters.Platform);
 	}
 
-	static ERayTracingPayloadType GetRayTracingPayloadType(const int32 PermutationId)
-	{
-		return ERayTracingPayloadType::RayTracingMaterial;
-	}
-
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_RDG_BUFFER_SRV(RaytracingAccelerationStructure, TLAS)
+		SHADER_PARAMETER_SRV(RaytracingAccelerationStructure, TLAS)
 
 		SHADER_PARAMETER(uint32, FrameRandomSeed)
 
@@ -276,8 +257,14 @@ class FRayTracingRTXGIProbeViewRGS : public FGlobalShader
 
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, RadianceOutput)
 
+		// assorted things needed by material resolves, even though some don't make sense outside of screenspace
+#if ENGINE_MAJOR_VERSION < 5
+		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, SSProfilesTexture)
+#else
+		SHADER_PARAMETER_TEXTURE(Texture2D, SSProfilesTexture)
+#endif
 		SHADER_PARAMETER_STRUCT_REF(FViewUniformShaderParameters, ViewUniformBuffer)
-		SHADER_PARAMETER_RDG_UNIFORM_BUFFER(FRaytracingLightDataPacked, LightDataPacked)
+		SHADER_PARAMETER_STRUCT_REF(FRaytracingLightDataPacked, LightDataPacked)
 	END_SHADER_PARAMETER_STRUCT()
 };
 
@@ -317,7 +304,7 @@ class FDDGIIrradianceBlend : public FGlobalShader
 
 		// Set to 1 to be able to visualize this in the editor by typing "vis DDGIIrradianceBlendDebug" and later "vis none" to make it go away.
 		// Set to 0 to disable and deadstrip everything related
-		OutEnvironment.SetDefine(TEXT("DDGIIrradianceBlendDebug"), WITH_EDITOR);
+		OutEnvironment.SetDefine(TEXT("DDGIIrradianceBlendDebug"), 0);
 
 		// needed for a typed UAV load. This already assumes we are raytracing, so should be fine.
 		OutEnvironment.CompilerFlags.Add(CFLAG_AllowTypedUAVLoads);
@@ -376,7 +363,7 @@ class FDDGIDistanceBlend : public FGlobalShader
 
 		// Set to 1 to be able to visualize this in the editor by typing "vis DDGIDistanceBlendDebug" and later "vis none" to make it go away.
 		// Set to 0 to disable and deadstrip everything related
-		OutEnvironment.SetDefine(TEXT("DDGIDistanceBlendDebug"), WITH_EDITOR);
+		OutEnvironment.SetDefine(TEXT("DDGIDistanceBlendDebug"), 0);
 
 		// needed for a typed UAV load. This already assumes we are raytracing, so should be fine.
 		OutEnvironment.CompilerFlags.Add(CFLAG_AllowTypedUAVLoads);
@@ -584,12 +571,7 @@ namespace DDGIVolumeUpdate
 		AnyRayTracingPassEnabledHandle = ARTPEDelegate.AddStatic(
 			[](bool& anyEnabled)
 			{
-				const bool bCanEverRun = CVarDDGIForceRealtime.GetValueOnRenderThread()
-#if WITH_EDITOR
-				|| !CVarDDGIStaticInEditor.GetValueOnRenderThread()
-#endif
-				;
-				anyEnabled |= bCanEverRun;
+				anyEnabled |= true;
 			}
 		);
 #endif // RHI_RAYTRACING
@@ -638,12 +620,7 @@ namespace DDGIVolumeUpdate
 			if (proxy->OwningScene != &Scene) continue;
 
 			// Don't update static runtime volumes during gameplay
-			const bool bIsValidForStatic = (View.bIsGameView && !CVarDDGIForceRealtime.GetValueOnRenderThread())
-#if WITH_EDITOR
-				|| CVarDDGIStaticInEditor.GetValueOnRenderThread()
-#endif
-				;
-			if (bIsValidForStatic && proxy->ComponentData.RuntimeStatic) continue;
+			if (View.bIsGameView && proxy->ComponentData.RuntimeStatic) continue;
 
 			// Don't update the volume if it is disabled
 			if (!proxy->ComponentData.EnableVolume) continue;
@@ -858,7 +835,12 @@ namespace DDGIVolumeUpdate
 		PassParameters->CameraPos = static_cast<FVector3f>(View.ViewMatrices.GetViewOrigin());
 		PassParameters->CameraMatrix = static_cast<FMatrix44f>(View.ViewMatrices.GetViewMatrix().Inverse());
 
-		PassParameters->TLAS = Scene.RayTracingScene.GetLayerView(ERayTracingSceneLayer::Base);
+#if ENGINE_MAJOR_VERSION < 5
+		PassParameters->TLAS = View.RayTracingScene.RayTracingSceneRHI->GetShaderResourceView();
+		check(PassParameters->TLAS);
+#else
+		PassParameters->TLAS = Scene.RayTracingScene.GetShaderResourceViewChecked();
+#endif
 		PassParameters->RadianceOutput = ProbeVisUAV;
 		PassParameters->FrameRandomSeed = GFrameNumber;
 
@@ -876,8 +858,13 @@ namespace DDGIVolumeUpdate
 			PassParameters->Sky_TextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 		}
 
+#if ENGINE_MAJOR_VERSION < 5
+		PassParameters->SSProfilesTexture = GraphBuilder.RegisterExternalTexture(View.RayTracingSubSurfaceProfileTexture);
+#else
+		PassParameters->SSProfilesTexture = View.RayTracingSubSurfaceProfileTexture;
+#endif
 		PassParameters->ViewUniformBuffer = View.ViewUniformBuffer;
-		PassParameters->LightDataPacked = View.RayTracingLightDataUniformBuffer;
+		PassParameters->LightDataPacked = View.RayTracingLightData.UniformBuffer;
 
 		FIntPoint DispatchSize(c_probeVisWidth, c_probeVisHeight);
 
@@ -941,7 +928,12 @@ namespace DDGIVolumeUpdate
 		FRayTracingRTXGIProbeUpdateRGS::FParameters* PassParameters = GraphBuilder.AllocParameters<FRayTracingRTXGIProbeUpdateRGS::FParameters>();
 		*PassParameters = DefaultPassParameters;
 
-		PassParameters->TLAS = Scene.RayTracingScene.GetLayerView(ERayTracingSceneLayer::Base);
+#if ENGINE_MAJOR_VERSION < 5
+		PassParameters->TLAS = View.RayTracingScene.RayTracingSceneRHI->GetShaderResourceView();
+		check(PassParameters->TLAS);
+#else
+		PassParameters->TLAS = Scene.RayTracingScene.GetShaderResourceViewChecked();
+#endif
 		PassParameters->RadianceOutput = ProbesRadianceUAV;
 		PassParameters->FrameRandomSeed = GFrameNumber;
 		
@@ -1013,8 +1005,13 @@ namespace DDGIVolumeUpdate
 		);
 		PassParameters->DebugOutput = GraphBuilder.CreateUAV(GraphBuilder.CreateTexture(DDGIDebugOutputDesc, TEXT("DDGIVolumeUpdateDebug")));
 
+#if ENGINE_MAJOR_VERSION < 5
+		PassParameters->SSProfilesTexture = GraphBuilder.RegisterExternalTexture(View.RayTracingSubSurfaceProfileTexture);
+#else
+		PassParameters->SSProfilesTexture = View.RayTracingSubSurfaceProfileTexture;
+#endif
 		PassParameters->ViewUniformBuffer = View.ViewUniformBuffer;
-		PassParameters->LightDataPacked = View.RayTracingLightDataUniformBuffer;
+		PassParameters->LightDataPacked = View.RayTracingLightData.UniformBuffer;
 
 		FIntPoint DispatchSize = ProbesRadianceTex->Desc.Extent;
 

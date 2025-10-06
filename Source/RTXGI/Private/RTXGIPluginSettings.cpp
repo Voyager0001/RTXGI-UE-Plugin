@@ -12,8 +12,6 @@
 #include "RTXGIPlugin.h"
 #include "DDGIVolumeComponent.h"
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(RTXGIPluginSettings)
-
 #define LOCTEXT_NAMESPACE "RTXGIPlugin"
 
 #if WITH_EDITOR

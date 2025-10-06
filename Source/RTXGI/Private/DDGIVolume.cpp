@@ -13,8 +13,6 @@
 #include "Components/BoxComponent.h"
 #include "Engine/CollisionProfile.h"
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(DDGIVolume)
-
 ADDGIVolume::ADDGIVolume(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -43,28 +41,12 @@ ADDGIVolume::ADDGIVolume(const FObjectInitializer& ObjectInitializer)
 void ADDGIVolume::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	if (DDGIVolumeComponent->RuntimeStatic)
-	{
-		auto CVarDDGIStaticInEditor = IConsoleManager::Get().FindConsoleVariable(TEXT("r.RTXGI.DDGI.StaticInEditor"));
-		if (CVarDDGIStaticInEditor && CVarDDGIStaticInEditor->GetBool())
-		{
-			return;
-		}
-	}
 	DDGIVolumeComponent->MarkRenderDynamicDataDirty();
 }
 
 void ADDGIVolume::PostEditMove(bool bFinished)
 {
 	Super::PostEditMove(bFinished);
-	if (DDGIVolumeComponent->RuntimeStatic)
-	{
-		auto CVarDDGIStaticInEditor = IConsoleManager::Get().FindConsoleVariable(TEXT("r.RTXGI.DDGI.StaticInEditor"));
-		if (CVarDDGIStaticInEditor && CVarDDGIStaticInEditor->GetBool())
-		{
-			return;
-		}
-	}
 	DDGIVolumeComponent->MarkRenderDynamicDataDirty();
 }
 #endif

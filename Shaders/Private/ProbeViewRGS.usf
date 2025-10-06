@@ -48,6 +48,8 @@ then "vis DDGIProbesTexture" to see the texture
 #include "/Engine/Private/RayTracing/RayTracingDirectionalLight.ush"
 #include "/Engine/Private/RayTracing/RayTracingRectLight.ush"
 #include "/Engine/Private/RayTracing/RayTracingSphereLight.ush"
+#include "/Engine/Private/RayTracing/RayTracingSpotLight.ush"
+#include "/Engine/Private/RayTracing/RayTracingPointLight.ush"
 #include "/Engine/Private/RayTracing/RayTracingLightingCommon.ush"
 #include "/Engine/Private/ReflectionEnvironmentShared.ush"
 #include "/Engine/Private/Montecarlo.ush"
@@ -88,7 +90,7 @@ RAY_TRACING_ENTRY_RAYGEN(ProbeViewRGS)
     // This is to make the radiance be in a viewable range
     float radianceMultiplier = DDGIVolume_ShouldUsePreExposure ? DDGIVolume_PreExposure : 1.0f;
 
-    FRayDesc Ray;
+    RayDesc Ray;
     Ray.Origin = CameraPos;
     float3 rayTarget = float3(float2(DispatchIndex.xy) / float2(DispatchRaysDimensions().xy) * 2.0f - 1.0f, 1.0f);
     rayTarget.y *= -1.0f;

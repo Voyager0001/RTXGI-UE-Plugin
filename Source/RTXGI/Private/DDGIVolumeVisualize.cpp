@@ -20,7 +20,6 @@
 #include "SystemTextures.h"
 
 // UE private interfaces
-#include "DataDrivenShaderPlatformInfo.h"
 #include "PostProcess/SceneRenderTargets.h"
 #include "SceneRendering.h"
 #include "DeferredShadingRenderer.h"
@@ -132,7 +131,7 @@ public:
 	/**
 	* Initialize the RHI for this rendering resource
 	*/
-	void InitRHI(FRHICommandListBase& RHICmdList) override
+	void InitRHI() override
 	{
 		const int32 NumSides = NumSphereSides;
 		const int32 NumRings = NumSphereRings;
@@ -175,7 +174,7 @@ public:
 #else
 		FRHIResourceCreateInfo CreateInfo(TEXT("TDDGIProbeSphereVertexBuffer"), &Verts);
 #endif
-		VertexBufferRHI = RHICmdList.CreateVertexBuffer(Size, BUF_Static, CreateInfo);
+		VertexBufferRHI = RHICreateVertexBuffer(Size, BUF_Static, CreateInfo);
 	}
 
 	int32 GetVertexCount() const { return NumSphereVerts; }
@@ -194,7 +193,7 @@ public:
 	/**
 	* Initialize the RHI for this rendering resource
 	*/
-	void InitRHI(FRHICommandListBase& RHICmdList) override
+	void InitRHI() override
 	{
 		const int32 NumSides = NumSphereSides;
 		const int32 NumRings = NumSphereRings;
@@ -227,7 +226,7 @@ public:
 #else
 		FRHIResourceCreateInfo CreateInfo(TEXT("TDDGIProbeSphereIndexBuffer"), &Indices);
 #endif
-		IndexBufferRHI = RHICmdList.CreateIndexBuffer(Stride, Size, BUF_Static, CreateInfo);
+		IndexBufferRHI = RHICreateIndexBuffer(Stride, Size, BUF_Static, CreateInfo);
 	}
 
 	int32 GetIndexCount() const { return NumIndices; };
@@ -251,7 +250,7 @@ public:
 
 	virtual ~FVisualizeDDGIProbesVertexDeclaration() {}
 
-	virtual void InitRHI(FRHICommandListBase& RHICmdList) override
+	virtual void InitRHI() override
 	{
 		FVertexDeclarationElementList Elements;
 		uint16 Stride = sizeof(FVisualDDGIProbesVertex);
