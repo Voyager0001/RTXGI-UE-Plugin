@@ -202,7 +202,7 @@ class FRayTracingRTXGIProbeUpdateRGS : public FGlobalShader
 		SHADER_PARAMETER_TEXTURE(Texture2D, SSProfilesTexture)
 #endif
 		SHADER_PARAMETER_STRUCT_REF(FViewUniformShaderParameters, ViewUniformBuffer)
-		SHADER_PARAMETER_STRUCT_REF(FRaytracingLightDataPacked, LightDataPacked)
+		SHADER_PARAMETER_RDG_UNIFORM_BUFFER(FRaytracingLightDataPacked, LightDataPacked)
 	END_SHADER_PARAMETER_STRUCT()
 };
 
@@ -264,7 +264,7 @@ class FRayTracingRTXGIProbeViewRGS : public FGlobalShader
 		SHADER_PARAMETER_TEXTURE(Texture2D, SSProfilesTexture)
 #endif
 		SHADER_PARAMETER_STRUCT_REF(FViewUniformShaderParameters, ViewUniformBuffer)
-		SHADER_PARAMETER_STRUCT_REF(FRaytracingLightDataPacked, LightDataPacked)
+		SHADER_PARAMETER_RDG_UNIFORM_BUFFER(FRaytracingLightDataPacked, LightDataPacked)
 	END_SHADER_PARAMETER_STRUCT()
 };
 
@@ -839,7 +839,7 @@ namespace DDGIVolumeUpdate
 		PassParameters->TLAS = View.RayTracingScene.RayTracingSceneRHI->GetShaderResourceView();
 		check(PassParameters->TLAS);
 #else
-		PassParameters->TLAS = Scene.RayTracingScene.GetShaderResourceViewChecked();
+		PassParameters->TLAS = Scene.RayTracingScene.GetLayerSRVChecked(ERayTracingSceneLayer::Base);
 #endif
 		PassParameters->RadianceOutput = ProbeVisUAV;
 		PassParameters->FrameRandomSeed = GFrameNumber;
@@ -864,7 +864,7 @@ namespace DDGIVolumeUpdate
 		PassParameters->SSProfilesTexture = View.RayTracingSubSurfaceProfileTexture;
 #endif
 		PassParameters->ViewUniformBuffer = View.ViewUniformBuffer;
-		PassParameters->LightDataPacked = View.RayTracingLightData.UniformBuffer;
+		PassParameters->LightDataPacked = View.RayTracingLightDataUniformBuffer;
 
 		FIntPoint DispatchSize(c_probeVisWidth, c_probeVisHeight);
 
@@ -932,7 +932,7 @@ namespace DDGIVolumeUpdate
 		PassParameters->TLAS = View.RayTracingScene.RayTracingSceneRHI->GetShaderResourceView();
 		check(PassParameters->TLAS);
 #else
-		PassParameters->TLAS = Scene.RayTracingScene.GetShaderResourceViewChecked();
+		PassParameters->TLAS = Scene.RayTracingScene.GetLayerSRVChecked(ERayTracingSceneLayer::Base);
 #endif
 		PassParameters->RadianceOutput = ProbesRadianceUAV;
 		PassParameters->FrameRandomSeed = GFrameNumber;
@@ -1011,7 +1011,7 @@ namespace DDGIVolumeUpdate
 		PassParameters->SSProfilesTexture = View.RayTracingSubSurfaceProfileTexture;
 #endif
 		PassParameters->ViewUniformBuffer = View.ViewUniformBuffer;
-		PassParameters->LightDataPacked = View.RayTracingLightData.UniformBuffer;
+		PassParameters->LightDataPacked = View.RayTracingLightDataUniformBuffer;
 
 		FIntPoint DispatchSize = ProbesRadianceTex->Desc.Extent;
 

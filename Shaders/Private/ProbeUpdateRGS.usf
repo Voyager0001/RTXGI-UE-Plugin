@@ -37,8 +37,8 @@
 #include "/Engine/Private/RayTracing/RayTracingDirectionalLight.ush"
 #include "/Engine/Private/RayTracing/RayTracingRectLight.ush"
 #include "/Engine/Private/RayTracing/RayTracingSphereLight.ush"
-#include "/Engine/Private/RayTracing/RayTracingSpotLight.ush"
-#include "/Engine/Private/RayTracing/RayTracingPointLight.ush"
+//#include "/Engine/Private/RayTracing/RayTracingSpotLight.ush"
+//#include "/Engine/Private/RayTracing/RayTracingPointLight.ush"
 #include "/Engine/Private/RayTracing/RayTracingLightingCommon.ush"
 #include "/Engine/Private/ReflectionEnvironmentShared.ush"
 #include "/Engine/Private/Montecarlo.ush"
@@ -173,7 +173,7 @@ RAY_TRACING_ENTRY_RAYGEN(ProbeUpdateRGS)
     float3 probeRayDirection = DDGIGetProbeRayDirection(rayIndex, DDGIVolume_numRaysPerProbe, DDGIVolume_probeRayRotationTransform);
 
     // Setup the probe ray
-    RayDesc Ray;
+    FRayDesc Ray;
     Ray.Origin = probeWorldPosition;
     Ray.Direction = probeRayDirection;
     Ray.TMin = 0.f;
